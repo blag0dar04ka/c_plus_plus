@@ -1,0 +1,559 @@
+#include "stdafx.h"
+#include <iostream>
+#include <fstream>
+#include <exception>
+#include <iterator>
+#include <vector>
+
+using namespace std;
+
+class Matrix
+{
+public:
+	int rows;
+	int columns;
+	vector <vector <double>> class_matrix;
+	Matrix(int a, int b) {
+		if (a <= 0 || b <= 0)
+			throw runtime_error("incorrect data (constructor matrix col+row)");
+		rows = a;
+		columns = b;
+		for (int i = 0; i < rows; i++) {
+			class_matrix.push_back(vector<double>(columns));
+		}
+	};
+
+	Matrix(int a, int b, ifstream& f)
+	{
+		if (a <= 0 || b <= 0) throw runtime_error("Incorrect data (file)");
+		rows = a;
+		columns = b;
+		for (int i = 0; i < rows; i++) {
+			class_matrix.push_back(vector<double>(columns));
+		}
+		for (vector<vector<double>>::iterator it = class_matrix.begin(); it != class_matrix.end(); it++) {
+			for (vector<double>::iterator itt = (*it).begin(); itt != (*it).end(); itt++) {
+				f >> *itt;
+			}
+		}
+	};
+
+
+	Matrix(const Matrix& M) {
+		if (this == &M) return;
+		rows = M.rows;
+		columns = M.columns;
+		for (int i = 0; i < rows; i++) {
+			class_matrix.push_back(vector<double>(columns));
+		}
+		for (int i = 0; i < rows; i++) {
+			for (int j = 0; j < columns; j++) {
+				class_matrix[i][j] = M.class_matrix[i][j];
+			}
+		}
+	}
+
+	Matrix& operator=(const Matrix& M)
+	{
+		if (this == &M) {
+			return *this;
+		}
+		rows = M.rows;
+		columns = M.columns;
+		for (int i = 0; i < rows; i++) {
+			class_matrix.push_back(vector<double>(columns));
+		}
+		for (int i = 0; i < rows; i++) {
+			for (int j = 0; j < columns; j++) {
+				class_matrix[i][j] = M.class_matrix[i][j];
+			}
+		}
+		return *this;
+	}
+
+	void print(ofstream& stream) {
+		for (int i = 0; i < rows; i++) {
+			for (int j = 0; j < columns; j++) {
+				if (class_matrix[i][j] == -0.0) class_matrix[i][j] = 0;
+				stream << class_matrix[i][j] << " ";
+			}
+			stream << "\n";
+		}
+	}
+	Matrix mul_scalar(Matrix &A, double b)
+	{
+		rows = A.rows;
+		columns = A.columns;
+		//Matrix temp(A.rows, A.columns);
+		for (int i = 0; i < A.rows; i++) {
+			for (int j = 0; j < A.columns; j++)
+			{
+				A.get_value(i, j) = A.get_value(i, j)*b;
+			}
+		}
+		return A;
+	}
+
+	Matrix trans(Matrix &A)
+	{
+		Matrix AA(A.columns, A.rows);
+		for (int i = 0; i < A.rows; i++) {
+			for (int j = 0; j < A.columns; j++)
+			{
+				AA.class_matrix[j][i] = A.class_matrix[i][j];
+			}
+		}
+		return AA;
+	}
+
+	Matrix plus(Matrix& A, Matrix &B)
+	{
+		Matrix C(A.rows, B.columns);
+		if (A.rows != B.rows || A.columns != B.columns) throw runtime_error("Illegal size (sum)");
+		for (int i = 0; i < A.rows; i++) {
+			for (int j = 0; j < A.columns; j++)
+			{
+				A.get_value(i, j) = A.class_matrix[i][j] + B.class_matrix[i][j];
+
+			}
+		}
+		return A;
+	}
+
+	double &get_value(int i, int j)
+	{
+		if (i < 0 || i >= rows || j<0 || j >= columns) {
+			throw runtime_error("Illegal index");
+		}
+		return class_matrix[i][j];
+	}
+	double get_value1(int i, int j) const
+	{
+		if (i < 0 || i >= rows || j<0 || j >= columns) {
+			throw runtime_error("Illegal index");
+		}
+		return class_matrix[i][j];
+	}
+
+	double det(Matrix TEST3)
+	{
+		double kst;
+		int i, j, p, k = 0, t;
+		p = 0;
+		for (i = 0; i<TEST3.rows - 1; i++)
+		{
+			t = 1;
+			while (TEST3.get_value(i, i) == 0)
+			{
+				for (j = 0; j<TEST3.rows; j++)
+				{
+					kst = TEST3.get_value(i, j);
+					TEST3.class_matrix[i][j] = TEST3.class_matrix[i + t][j];
+					TEST3.class_matrix[i + t][j] = kst;
+				}
+				p++;
+				t++;
+			}
+
+			for (k = i + 1; k<TEST3.rows; k++)
+			{
+				kst = TEST3.get_value(k, i) / TEST3.get_value(i, i);
+				for (j = 0; j<TEST3.rows; j++)
+					TEST3.get_value(k, j) -= TEST3.get_value(i, j) * kst;
+			}
+		}
+
+		kst = pow(-1, p);
+		for (i = 0; i<TEST3.rows; i++)
+			kst *= TEST3.get_value(i, i);
+		if (kst != 0)
+			return kst;
+		else return 0;
+
+	}
+
+	Matrix stupenka(const Matrix& M) {
+		Matrix result = M;
+		int c;
+		if (result.columns < result.rows)
+			c = result.columns;
+		else
+			c = result.rows;
+
+		for (int i = 0; i < c; i++) {
+			if (!result.get_value(i, i)) {
+				for (int j = i + 1; j < result.rows; j++) {
+					if (result.get_value(j, i)) {
+						for (int k = 0; k < result.columns; k++) {
+							swap(result.get_value(i, k), result.get_value(j, k));
+						}
+						break;
+					}
+				}
+			}
+			if (!result.get_value(i, i)) continue;
+			for (int j = i + 1; j < result.rows; j++) {
+				double K = result.get_value(i, i), M = result.get_value(j, i);
+				result.get_value(j, i) = 0;
+				for (int k = i + 1; k < result.columns; k++) {
+
+					result.get_value(j, k) -= M / K*result.get_value(i, k);
+				}
+			}
+		}
+		return result;
+	}
+
+	Matrix stupenka_1(const Matrix& M) {
+		Matrix result = stupenka(M);
+		for (int i = result.rows - 1; i >= 0; i--) {
+			for (int k = 0; k < result.columns; k++) {
+				if (result.get_value(i, k)) {
+					for (int j = 0; j < i; j++) {
+						double K = result.get_value(i, k), M = result.get_value(j, k);
+						for (int q = 0; q < result.columns; q++) {
+							result.get_value(j, q) -= M / K*result.get_value(i, q);
+						}
+					}
+					double D = result.get_value(i, k);
+					for (int q = 0; q < result.columns; q++) {
+						result.get_value(i, q) /= D;
+					}
+					break;
+				}
+			}
+		}
+		return result;
+	}
+
+
+
+	Matrix Get_matr(Matrix M, int indRow, int indCol)
+	{
+		Matrix temp_matr(M.rows - 1, M.columns - 1);
+		int ki = 0;
+		for (int i = 0; i < M.rows; i++) {
+			if (i != indRow) {
+				for (int j = 0, kj = 0; j < M.rows; j++) {
+					if (j != indCol) {
+						temp_matr.class_matrix[ki][kj] = M.class_matrix[i][j];
+						kj++;
+					}
+				}
+				ki++;
+			}
+		}
+		return temp_matr;
+	}
+
+
+	Matrix inverse(Matrix &M)
+	{
+		if (M.rows != M.columns) {
+			throw runtime_error("Cannot be inversed");
+		}
+		Matrix obr_matr(M.rows, M.columns);
+		Matrix temp_matr(M.rows - 1, M.rows - 1);
+		double d = det(M);
+		for (int i = 0; i < M.rows; i++) {
+			for (int j = 0; j < M.rows; j++) {
+				temp_matr = temp_matr.Get_matr(M, i, j);
+				double dd = det(temp_matr);
+				obr_matr.class_matrix[i][j] = pow(-1.0, i + j + 2) * dd / d;
+			}
+		}
+		obr_matr = obr_matr.trans(obr_matr);
+		return obr_matr;
+	}
+
+	Matrix mul(const Matrix& M1, const Matrix& M2) {
+		if (M1.columns != M2.rows)
+		{
+			throw runtime_error("incorrect data (mul)");
+		}
+		Matrix result(M1.rows, M2.columns);
+
+		for (int i = 0; i < M1.rows; i++) {
+			for (int j = 0; j < M1.columns; j++) {
+				double sum = 0;
+				for (int k = 0; k < M1.columns; k++) {
+					sum += M1.class_matrix[i][k] * M2.class_matrix[k][j];
+				}
+				result.class_matrix[i][j] = sum;
+			}
+		}
+		return result;
+	}
+
+
+};
+
+class vMatrix : public Matrix
+{
+	vMatrix(int rows, int columns) : Matrix(rows, columns)
+	{
+		if (columns != 1)   throw runtime_error("incorrect data (vector)");
+	}
+	vMatrix(int rows, int cols, ifstream& inpt) : Matrix(rows, cols, inpt) {
+		if (cols != 1) throw runtime_error("incorrect data (vector)");
+	}
+	vMatrix(const vMatrix& M) : Matrix(M) {};
+};
+
+
+
+class sqMatrix : public Matrix {
+public:
+	sqMatrix(int rows, int columns) : Matrix(rows, columns)
+	{
+		if (columns != columns)   throw runtime_error("incorrect data (vector)");
+	}
+	sqMatrix(int rows, int cols, ifstream& inpt) : Matrix(rows, cols, inpt) {
+		if (cols != columns) throw runtime_error("incorrect data (vector)");
+	}
+	sqMatrix(const vMatrix& M) : Matrix(M) {};
+
+
+
+};
+
+
+int main()
+{
+	/*try {
+		double kk = 0;
+		ifstream f("test7.txt");
+		ofstream o("out.txt");
+		f >> kk;
+		int n1, m1;
+		f >> n1 >> m1;
+		Matrix X(n1, m1, f);
+		int n2, m2;
+		f >> n2 >> m2;
+		Matrix Y(n2, m2, f);
+		int n3, m3;
+		f >> n3 >> m3;
+		Matrix Z(n3, m3, f);
+
+		Matrix A = X;
+		Matrix B = Y.trans(Y);
+		Matrix C = Z.inverse(Z);
+		Matrix MUL = MUL.mul(B, C);
+		Matrix Temp = Temp.mul_scalar(MUL, kk);
+		Matrix D = D.plus(A, Temp);
+		D.print(o);
+		o << D.det(D);
+		o << endl;
+		o << D.rows << " " << D.columns;
+	}
+		catch (exception& e)
+	{
+		ofstream o("out.txt");
+		o << "-1\n" << e.what() << "\n";
+	}
+	return 0;
+	}*/
+	/*try
+	{
+
+		ifstream f("in (7).txt");
+		int a, b;
+		f >> a >> b;
+		Matrix M0(a, b);
+		for (int i = 0; i < a; i++) {
+			for (int j = 0; j < b; j++) {
+				f >> M0.get_value(i, j);
+			}
+		}
+		f.close();
+
+		Matrix M01 = M0.stupenka_1(M0);
+		int rank_M01 = 0;
+		vector<int> lola;
+		for (int i = 0; i < a; i++) {
+			for (int j = 0; j < b; j++) {
+				if (M01.get_value(i, j)) {
+					rank_M01++;
+					lola.push_back(j);
+					break;
+				}
+			}
+		}
+		vector<int> lola2;
+		int ind_main = 0;
+		for (int i = 0; i < b; i++) {
+			if (ind_main < lola.size() && lola[ind_main] == i) {
+				ind_main++;
+			}
+			else {
+				lola2.push_back(i);
+			}
+		}
+
+		ofstream out("out.txt");
+
+		int temp;
+		if (0 > b - rank_M01)
+			temp = 0;
+		else temp = b - rank_M01;
+		out << temp << " " << b << "\n";
+		if (b - rank_M01 < 0) {
+			out.close();
+			return 0;
+		}
+		for (int k = 0; k < lola2.size(); k++) {
+			vector<double> B(a, 0);
+			vector <double> ans(b, 0);
+			ans[lola2[k]] = 1;
+			for (int i = a - 1; i >= 0; i--) {
+				for (int j = 0; j < b; j++) {
+					if (M01.get_value(i, j)) {
+						for (int h = j + 1; h < b; h++) {
+							if (ans[h]) {
+								B[i] -= M01.get_value(i, h)*ans[h];
+							}
+						}
+						B[i] /= M01.get_value(i, j);
+						ans[j] = B[i];
+						break;
+					}
+				}
+			}
+			for (int i = 0; i < b; i++) {
+				out << ans[i] << " ";
+			}
+			out << "\n";
+		}
+		out.close();
+		return 0;
+	}
+	catch (exception& e)
+	{
+		ofstream o("out.txt");
+		o << "-1\n" << e.what() << "\n";
+	}
+	return 0;
+}*/
+
+		fstream in("in (12).txt");
+		int a, b;
+		in >> a >> b;
+		Matrix M0(a, b + 1);
+		for (int i = 0; i < a; i++) {
+			for (int j = 0; j < b; j++) {
+				in >> M0.get_value(i, j);
+			}
+		}
+		for (int i = 0; i < a; i++) {
+			in >> M0.get_value(i, b);
+		}
+		in.close();
+
+		Matrix Mm(a, b);
+		for (int i = 0; i < a; i++) {
+			for (int j = 0; j < b; j++) {
+				Mm.get_value(i, j) = M0.get_value(i, j);
+			}
+		}
+		Matrix M01 = M0.stupenka(M0);
+		int rank_M01 = 0, rank_Mm = 0;
+		vector<int> main_val;
+		for (int i = 0; i < a; i++) {
+			for (int j = 0; j < b; j++) {
+				if (M01.get_value(i, j)) {
+					rank_M01++;
+					main_val.push_back(j);
+					break;
+				}
+			}
+		}
+		Matrix Mm1 = Mm.stupenka_1(Mm);
+		for (int i = 0; i < a; i++) {
+			for (int j = 0; j < b; j++) {
+				if (Mm1.get_value(i, j)) {
+					rank_Mm++;
+					break;
+				}
+			}
+		}
+		ofstream out("out.txt");
+
+		if (rank_M01 != rank_Mm) {
+			out << "-1\n";
+			out.close();
+			return 0;
+		}
+		out << b << " " << b - rank_M01 << "\n";
+		vector<double> B(a, 0);
+		for (int i = 0; i < a; i++) {
+			B[i] = M01.get_value(i, b);
+		}
+		vector <double> ans(b, 0);
+		for (int i = a - 1; i >= 0; i--) {
+			for (int j = 0; j < b; j++) {
+				if (M01.get_value(i, j)) {
+					for (int h = j + 1; h < b; h++) {
+						if (ans[h]) {
+							B[i] -= M01.get_value(i, h)*ans[h];
+						}
+					}
+					B[i] /= M01.get_value(i, j);
+					ans[j] = B[i];
+					break;
+				}
+			}
+		}
+		for (int i = 0; i < b; i++) {
+			out << ans[i] << " ";
+		}
+		out << "\n";
+
+		vector<int> free_val;
+		int ind_main = 0;
+		for (int i = 0; i < b; i++) {
+			if (ind_main < main_val.size() && main_val[ind_main] == i) {
+				ind_main++;
+			}
+			else {
+				free_val.push_back(i);
+			}
+		}
+
+		for (int k = 0; k < free_val.size(); k++) {
+			vector<double> B(a, 0);
+			vector <double> ans(b, 0);
+			ans[free_val[k]] = 1;
+			for (int i = a - 1; i >= 0; i--) {
+				for (int j = 0; j < b; j++) {
+					if (M01.get_value(i, j)) {
+						for (int h = j + 1; h < b; h++) {
+							if (ans[h]) {
+								B[i] -= M01.get_value(i, h)*ans[h];
+							}
+						}
+						B[i] /= M01.get_value(i, j);
+						ans[j] = B[i];
+						break;
+					}
+				}
+			}
+			for (int i = 0; i < b; i++) {
+				out << ans[i] << " ";
+			}
+			out << "\n";
+		}
+		out.close();
+
+		return 0;
+		}
+
+
+
+
+
+
+
+
+
+
+
